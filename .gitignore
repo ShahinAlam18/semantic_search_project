@@ -6,3 +6,9 @@ __pycache__/
 .mypy_cache/
 *.log
 semantic_search_project/
+.idea/
+.vscode/
+dist/
+build/
+htmlcov/
+.coverage
