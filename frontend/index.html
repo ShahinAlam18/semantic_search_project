@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Semantic Search Workspace</title>
+    <link rel="icon" href="/favicon.ico" />
+    <style>
+      :root {
+        --bg: #07111f;
+        --bg-soft: rgba(9, 21, 38, 0.8);
+        --panel: rgba(8, 19, 35, 0.72);
+        --panel-strong: rgba(10, 24, 44, 0.9);
+        --border: rgba(148, 163, 184, 0.16);
+        --text: #ecf4ff;
+        --muted: #9bb0c9;
+        --accent: #5eead4;
+        --accent-strong: #14b8a6;
+        --accent-warm: #f59e0b;
+        --danger: #fca5a5;
+        --shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
+        --radius-lg: 28px;
+        --radius-md: 20px;
+        --radius-sm: 14px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, rgba(20, 184, 166, 0.18), transparent 32%),
+          radial-gradient(circle at 85% 15%, rgba(245, 158, 11, 0.16), transparent 28%),
+          linear-gradient(145deg, #02060d 0%, #07111f 45%, #0c1830 100%);
+      }
+
+      body::before,
+      body::after {
+        content: "";
+        position: fixed;
+        inset: auto;
+        z-index: 0;
+        pointer-events: none;
+        filter: blur(10px);
+      }
+
+      body::before {
+        width: 24rem;
+        height: 24rem;
+        top: 8%;
+        left: -8%;
+        border-radius: 999px;
+        background: rgba(94, 234, 212, 0.08);
+      }
+
+      body::after {
+        width: 18rem;
+        height: 18rem;
+        right: 8%;
+        bottom: 6%;
+        border-radius: 999px;
+        background: rgba(245, 158, 11, 0.08);
+      }
+
+      .shell {
+        position: relative;
+        z-index: 1;
+        width: min(1160px, calc(100% - 32px));
+        margin: 32px auto;
+        display: grid;
+        gap: 24px;
+      }
+
+      .hero,
+      .results-panel {
+        border: 1px solid var(--border);
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(24px);
+      }
+
+      .hero {
+        border-radius: var(--radius-lg);
+        padding: 32px;
+        overflow: hidden;
+      }
+
+      .hero-grid {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 24px;
+        align-items: end;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 14px;
+        margin-bottom: 18px;
+        border-radius: 999px;
+        background: rgba(94, 234, 212, 0.1);
+        color: var(--accent);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        font-size: 0.74rem;
+        font-weight: 700;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2.3rem, 4vw, 4.5rem);
+        line-height: 0.95;
+        letter-spacing: -0.04em;
+        max-width: 12ch;
+      }
+
+      .hero-copy {
+        margin: 18px 0 0;
+        max-width: 60ch;
+        color: var(--muted);
+        font-size: 1.02rem;
+        line-height: 1.7;
+      }
+
+      .stats {
+        display: grid;
+        gap: 14px;
+      }
+
+      .stat-card {
+        border-radius: var(--radius-md);
+        padding: 18px 20px;
+        background: linear-gradient(180deg, rgba(12, 31, 53, 0.88), rgba(7, 18, 32, 0.9));
+        border: 1px solid rgba(148, 163, 184, 0.14);
+      }
+
+      .stat-label {
+        color: var(--muted);
+        font-size: 0.82rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .stat-value {
+        margin-top: 8px;
+        font-size: 1.45rem;
+        font-weight: 700;
+      }
+
+      .search-bar {
+        margin-top: 28px;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 14px;
+      }
+
+      .field {
+        position: relative;
+      }
+
+      .field input {
+        width: 100%;
+        padding: 18px 20px 18px 54px;
+        border-radius: 18px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        background: rgba(6, 16, 29, 0.78);
+        color: var(--text);
+        font-size: 1rem;
+        outline: none;
+        transition: border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+      }
+
+      .field input:focus {
+        border-color: rgba(94, 234, 212, 0.62);
+        box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.12);
+        transform: translateY(-1px);
+      }
+
+      .field svg {
+        position: absolute;
+        left: 18px;
+        top: 50%;
+        transform: translateY(-50%);
+        opacity: 0.74;
+      }
+
+      button {
+        border: 0;
+        border-radius: 18px;
+        padding: 0 24px;
+        min-height: 60px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #06211e;
+        background: linear-gradient(135deg, var(--accent), #8bffe0);
+        font-weight: 800;
+        font-size: 0.98rem;
+        cursor: pointer;
+        transition: transform 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
+        box-shadow: 0 16px 40px rgba(20, 184, 166, 0.28);
+      }
+
+      button:hover {
+        transform: translateY(-2px);
+      }
+
+      button:disabled {
+        opacity: 0.7;
+        cursor: progress;
+      }
+
+      .results-panel {
+        border-radius: var(--radius-lg);
+        padding: 24px;
+      }
+
+      .panel-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+
+      .panel-title {
+        margin: 0;
+        font-size: 1.05rem;
+        letter-spacing: 0.01em;
+      }
+
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.08);
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        background: var(--accent);
+        box-shadow: 0 0 0 6px rgba(94, 234, 212, 0.16);
+      }
+
+      .message,
+      .result-card {
+        animation: rise 420ms ease both;
+      }
+
+      .message {
+        border-radius: var(--radius-md);
+        padding: 18px 20px;
+        border: 1px solid rgba(148, 163, 184, 0.12);
+        background: rgba(8, 18, 33, 0.64);
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .message.error {
+        border-color: rgba(252, 165, 165, 0.24);
+        color: #ffd0d0;
+        background: rgba(61, 18, 26, 0.45);
+      }
+
+      .results {
+        display: grid;
+        gap: 16px;
+      }
+
+      .result-card {
+        padding: 22px;
+        border-radius: 24px;
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        background:
+          linear-gradient(180deg, rgba(11, 28, 48, 0.96), rgba(5, 16, 28, 0.94)),
+          rgba(12, 22, 37, 0.9);
+      }
+
+      .result-label {
+        margin: 0 0 10px;
+        color: var(--accent-warm);
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .result-question {
+        margin: 0 0 14px;
+        font-size: 1.18rem;
+        line-height: 1.35;
+      }
+
+      .result-answer {
+        margin: 0;
+        color: #d4e1f0;
+        line-height: 1.7;
+        white-space: pre-wrap;
+      }
+
+      mark {
+        padding: 0.08em 0.28em;
+        border-radius: 8px;
+        background: rgba(94, 234, 212, 0.18);
+        color: #dffef7;
+      }
+
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      .meta-chip {
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.08);
+        border: 1px solid rgba(148, 163, 184, 0.12);
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+
+      .loader {
+        width: 18px;
+        height: 18px;
+        border-radius: 999px;
+        border: 2px solid rgba(255, 255, 255, 0.24);
+        border-top-color: var(--accent);
+        animation: spin 0.9s linear infinite;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateY(12px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @media (max-width: 900px) {
+        .hero-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 720px) {
+        .shell {
+          width: min(100% - 20px, 1160px);
+          margin: 16px auto 24px;
+        }
+
+        .hero,
+        .results-panel {
+          padding: 18px;
+          border-radius: 24px;
+        }
+
+        .search-bar {
+          grid-template-columns: 1fr;
+        }
+
+        button {
+          width: 100%;
+        }
+
+        .panel-top {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <div class="hero-grid">
+          <div>
+            <div class="eyebrow">
+              <span>Semantic Search</span>
+              <span>StackOverflow QA</span>
+            </div>
+            <h1>Search developer answers with a calmer, faster workflow.</h1>
+            <p class="hero-copy">
+              Ask a programming question in English and browse the closest matching Stack Overflow questions using
+              precomputed embeddings, FAISS cosine similarity, and a sentence-transformers query encoder.
+            </p>
+
+            <div class="search-bar">
+              <label class="field" for="query">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M21 21L15.8 15.8M17 10.5A6.5 6.5 0 1 1 4 10.5a6.5 6.5 0 0 1 13 0Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+                <input id="query" placeholder="Try: how to reverse a list in python" />
+              </label>
+              <button id="searchBtn" type="button">Search Answers</button>
+            </div>
+          </div>
+
+          <div class="stats">
+            <article class="stat-card">
+              <div class="stat-label">Backend</div>
+              <div id="backendValue" class="stat-value">Detecting...</div>
+            </article>
+            <article class="stat-card">
+              <div class="stat-label">Dataset</div>
+              <div id="datasetValue" class="stat-value">Checking...</div>
+            </article>
+            <article class="stat-card">
+              <div class="stat-label">Indexed Items</div>
+              <div id="countValue" class="stat-value">0</div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="results-panel">
+        <div class="panel-top">
+          <h2 class="panel-title">Results</h2>
+          <div id="statusPill" class="status-pill">
+            <span class="dot"></span>
+            <span id="statusText">Checking backend status...</span>
+          </div>
+        </div>
+
+        <div id="content" class="message">Start by searching for a programming question.</div>
+      </section>
+    </main>
+
+    <script>
+      const qInput = document.getElementById("query");
+      const btn = document.getElementById("searchBtn");
+      const content = document.getElementById("content");
+      const statusText = document.getElementById("statusText");
+      const backendValue = document.getElementById("backendValue");
+      const datasetValue = document.getElementById("datasetValue");
+      const countValue = document.getElementById("countValue");
+
+      let apiBase = "";
+      let latestMeta = null;
+
+      function escapeHtml(value) {
+        return value.replace(/[&<>"']/g, (char) => ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;"
+        })[char]);
+      }
+
+      function escapeRegExp(value) {
+        return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      }
+
+      function highlight(text, query) {
+        const escaped = escapeHtml(text);
+        if (!query) return escaped;
+        const pattern = escapeRegExp(query.trim());
+        if (!pattern) return escaped;
+        return escaped.replace(new RegExp(pattern, "ig"), (match) => `<mark>${match}</mark>`);
+      }
+
+      function setStatus(message) {
+        statusText.textContent = message;
+      }
+
+      function renderMessage(message, kind = "") {
+        content.className = `message${kind ? ` ${kind}` : ""}`;
+        content.innerHTML = message;
+      }
+
+      async function detectBackend() {
+        const sameOrigin = window.location.origin.startsWith("http") ? window.location.origin : null;
+        const candidates = [
+          sameOrigin,
+          "http://127.0.0.1:8000",
+          "http://localhost:8000"
+        ].filter(Boolean);
+
+        for (const candidate of candidates) {
+          try {
+            const response = await fetch(`${candidate}/health`, { method: "GET" });
+            if (!response.ok) continue;
+
+            const payload = await response.json();
+            apiBase = candidate;
+            latestMeta = payload;
+            backendValue.textContent = payload.search_backend || "unknown";
+            datasetValue.textContent = payload.dataset_source || "unknown";
+            countValue.textContent = String(payload.item_count ?? 0);
+            setStatus(`Connected to ${candidate.replace("http://", "")}`);
+            return true;
+          } catch (error) {
+            continue;
+          }
+        }
+
+        backendValue.textContent = "Offline";
+        datasetValue.textContent = "Unavailable";
+        countValue.textContent = "0";
+        setStatus("Backend not detected");
+        renderMessage(
+          "The frontend could not reach the backend. Start the FastAPI server with <strong><code>uvicorn backend.main:app --reload</code></strong> and open <strong>http://127.0.0.1:8000</strong>.",
+          "error"
+        );
+        return false;
+      }
+
+      function renderResults(results, query, meta) {
+        if (!results.length) {
+          renderMessage("No matching results found. Try a shorter or more general programming question.");
+          return;
+        }
+
+        content.className = "results";
+        content.innerHTML = results.map((item) => `
+          <article class="result-card">
+            <p class="result-label">Matched Question</p>
+            <h3 class="result-question">${highlight(item.question, query)}</h3>
+            <p class="result-answer">Cosine similarity score: ${escapeHtml(String(item.score ?? ""))}</p>
+          </article>
+        `).join("") + `
+          <div class="meta">
+            <div class="meta-chip">Backend: ${escapeHtml(meta.search_backend || "unknown")}</div>
+            <div class="meta-chip">Dataset: ${escapeHtml(meta.dataset_source || "unknown")}</div>
+            <div class="meta-chip">Results: ${escapeHtml(String(meta.count || results.length))}</div>
+          </div>
+        `;
+      }
+
+      async function runSearch() {
+        const query = qInput.value.trim();
+        if (!query) {
+          renderMessage("Type a programming question to search the knowledge base.");
+          return;
+        }
+
+        if (!apiBase) {
+          const connected = await detectBackend();
+          if (!connected) return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="loader"></span>';
+        renderMessage("Searching the knowledge base...");
+        setStatus("Running search...");
+
+        try {
+          const response = await fetch(`${apiBase}/search?q=${encodeURIComponent(query)}&k=5`);
+          if (!response.ok) {
+            const message = await response.text();
+            throw new Error(message || `Request failed with ${response.status}`);
+          }
+
+          const payload = await response.json();
+          latestMeta = payload.meta || latestMeta;
+          backendValue.textContent = payload.meta?.search_backend || backendValue.textContent;
+          datasetValue.textContent = payload.meta?.dataset_source || datasetValue.textContent;
+          setStatus("Search completed");
+          renderResults(payload.results || [], query, payload.meta || {});
+        } catch (error) {
+          setStatus("Search failed");
+          renderMessage(
+            `Search request failed. ${escapeHtml(error.message)}. If the backend was restarted, refresh the page and try again.`,
+            "error"
+          );
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "Search Answers";
+        }
+      }
+
+      btn.addEventListener("click", runSearch);
+      qInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          runSearch();
+        }
+      });
+
+      detectBackend();
+    </script>
+  </body>
+</html>
