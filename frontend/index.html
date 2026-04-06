@@ -128,29 +128,60 @@
         line-height: 1.7;
       }
 
+      .hero-note {
+        margin-top: 18px;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        border-radius: 999px;
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        background: rgba(8, 18, 33, 0.62);
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .hero-note strong {
+        color: var(--text);
+        font-weight: 700;
+      }
+
       .stats {
-        display: grid;
+        display: flex;
+        flex-direction: column;
         gap: 14px;
       }
 
       .stat-card {
         border-radius: var(--radius-md);
-        padding: 18px 20px;
+        padding: 16px 18px;
         background: linear-gradient(180deg, rgba(12, 31, 53, 0.88), rgba(7, 18, 32, 0.9));
         border: 1px solid rgba(148, 163, 184, 0.14);
+        min-height: 112px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
       }
 
       .stat-label {
         color: var(--muted);
-        font-size: 0.82rem;
+        font-size: 0.78rem;
         text-transform: uppercase;
         letter-spacing: 0.08em;
       }
 
       .stat-value {
         margin-top: 8px;
-        font-size: 1.45rem;
+        font-size: clamp(1.55rem, 2vw, 2rem);
         font-weight: 700;
+        line-height: 1;
+      }
+
+      .stat-subtext {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 0.85rem;
+        line-height: 1.5;
       }
 
       .search-bar {
@@ -233,6 +264,20 @@
         margin: 0;
         font-size: 1.05rem;
         letter-spacing: 0.01em;
+      }
+
+      .result-summary {
+        margin-bottom: 16px;
+        padding: 14px 16px;
+        border-radius: 18px;
+        border: 1px solid rgba(148, 163, 184, 0.12);
+        background: rgba(8, 18, 33, 0.5);
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .result-summary strong {
+        color: var(--text);
       }
 
       .status-pill {
@@ -405,6 +450,10 @@
               Ask a programming question in English and browse the closest matching Stack Overflow questions using
               precomputed embeddings, FAISS cosine similarity, and a sentence-transformers query encoder.
             </p>
+            <div class="hero-note">
+              <span>Live search system</span>
+              <strong id="heroMode">Detecting backend mode...</strong>
+            </div>
 
             <div class="search-bar">
               <label class="field" for="query">
@@ -421,14 +470,17 @@
             <article class="stat-card">
               <div class="stat-label">Backend</div>
               <div id="backendValue" class="stat-value">Detecting...</div>
+              <div class="stat-subtext">Search engine mode currently serving requests.</div>
             </article>
             <article class="stat-card">
               <div class="stat-label">Dataset</div>
               <div id="datasetValue" class="stat-value">Checking...</div>
+              <div class="stat-subtext">Source of indexed questions used by the application.</div>
             </article>
             <article class="stat-card">
               <div class="stat-label">Indexed Items</div>
               <div id="countValue" class="stat-value">0</div>
+              <div class="stat-subtext">Question vectors or fallback entries currently available.</div>
             </article>
           </div>
         </div>
@@ -455,6 +507,7 @@
       const backendValue = document.getElementById("backendValue");
       const datasetValue = document.getElementById("datasetValue");
       const countValue = document.getElementById("countValue");
+      const heroMode = document.getElementById("heroMode");
 
       let apiBase = "";
       let latestMeta = null;
@@ -485,6 +538,12 @@
         statusText.textContent = message;
       }
 
+      function updateHeroMode(payload) {
+        const backend = payload?.search_backend || "unknown";
+        const dataset = payload?.dataset_source || "unknown";
+        heroMode.textContent = `${backend} backend · ${dataset} dataset`;
+      }
+
       function renderMessage(message, kind = "") {
         content.className = `message${kind ? ` ${kind}` : ""}`;
         content.innerHTML = message;
@@ -509,6 +568,7 @@
             backendValue.textContent = payload.search_backend || "unknown";
             datasetValue.textContent = payload.dataset_source || "unknown";
             countValue.textContent = String(payload.item_count ?? 0);
+            updateHeroMode(payload);
             setStatus(`Connected to ${candidate.replace("http://", "")}`);
             return true;
           } catch (error) {
@@ -519,6 +579,7 @@
         backendValue.textContent = "Offline";
         datasetValue.textContent = "Unavailable";
         countValue.textContent = "0";
+        heroMode.textContent = "backend offline";
         setStatus("Backend not detected");
         renderMessage(
           "The frontend could not reach the backend. Start the FastAPI server with <strong><code>uvicorn backend.main:app --reload</code></strong> and open <strong>http://127.0.0.1:8000</strong>.",
@@ -534,7 +595,14 @@
         }
 
         content.className = "results";
-        content.innerHTML = results.map((item) => `
+        content.innerHTML = `
+          <div class="result-summary">
+            <strong>${escapeHtml(String(meta.count || results.length))} matches</strong>
+            for <strong>${escapeHtml(query)}</strong>.
+            Ranked with ${escapeHtml(meta.search_backend || "the current")} search over the
+            ${escapeHtml(meta.dataset_source || "active")} dataset.
+          </div>
+        ` + results.map((item) => `
           <article class="result-card">
             <p class="result-label">Matched Question</p>
             <h3 class="result-question">${highlight(item.question, query)}</h3>
@@ -577,6 +645,7 @@
           latestMeta = payload.meta || latestMeta;
           backendValue.textContent = payload.meta?.search_backend || backendValue.textContent;
           datasetValue.textContent = payload.meta?.dataset_source || datasetValue.textContent;
+          updateHeroMode(payload.meta || latestMeta);
           setStatus("Search completed");
           renderResults(payload.results || [], query, payload.meta || {});
         } catch (error) {
